@@ -45,3 +45,18 @@ for path in set(paths):
 
 # Download files
 download_files(urls, paths)
+
+config_urls = [
+    'https://huggingface.co/lambdalabs/sd-image-variations-diffusers/resolve/main/unet/config.json',
+    'https://huggingface.co/lambdalabs/sd-image-variations-diffusers/resolve/main/image_encoder/config.json',
+    'https://huggingface.co/stabilityai/sd-vae-ft-mse/resolve/main/config.json'
+]
+
+config_paths = [
+    'sd-image-variations-diffusers/unet', 
+    'image_encoder', 
+    'sd-vae-ft-mse'
+]
+
+# Download config files
+download_files(config_urls, config_paths)
