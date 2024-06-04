@@ -1,8 +1,28 @@
 import os
-import wget
+import requests
 from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
-os.makedirs('pretrained_weights', exist_ok=True)
+def download_file(session, url, path):
+    local_filename = url.split('/')[-1]
+    with session.get(url, stream=True) as r:
+        r.raise_for_status()
+        with open(os.path.join(path, local_filename), 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+    return local_filename
+
+def download_files(urls, paths):
+    with requests.Session() as session:
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(download_file, session, url, path) for url, path in zip(urls, paths)]
+            for future in tqdm(concurrent.futures.as_completed(futures), total=len(futures), desc="Downloading files"):
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"Download failed: {e}")
+
+base_dir = 'pretrained_weights'
 
 urls = ['https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_l_8x8_300e_coco/yolox_l_8x8_300e_coco_20211126_140236-d3bd2b23.pth',
         'https://huggingface.co/yzd-v/DWPose/resolve/main/dw-ll_ucoco_384.pth',
@@ -16,23 +36,9 @@ urls = ['https://download.openmmlab.com/mmdetection/v2.0/yolox/yolox_l_8x8_300e_
         ]
 
 paths = ['dwpose', 'dwpose', 'MusePose', 'MusePose', 'MusePose', 'MusePose', 'sd-image-variations-diffusers/unet', 'image_encoder', 'sd-vae-ft-mse']
+# Create directories
+for path in set(paths):
+    os.makedirs(path, exist_ok=True)
 
-for path in paths:
-  os.makedirs(f'pretrained_weights/{path}', exist_ok=True)
-
-# saving weights 
-for url, path in tqdm(zip(urls, paths)):
-    filename = wget.download(url, f'pretrained_weights/{path}')
-
-config_urls = ['https://huggingface.co/lambdalabs/sd-image-variations-diffusers/resolve/main/unet/config.json',
-           'https://huggingface.co/lambdalabs/sd-image-variations-diffusers/resolve/main/image_encoder/config.json',
-           'https://huggingface.co/stabilityai/sd-vae-ft-mse/resolve/main/config.json']
-
-config_paths = ['sd-image-variations-diffusers/unet', 'image_encoder', 'sd-vae-ft-mse']
-
-# saving config files 
-for url, path in tqdm(zip(config_urls, config_paths)):
-    filename = wget.download(url, f'pretrained_weights/{path}')
-
-# renaming model name as given in readme
-os.rename('pretrained_weights/dwpose/yolox_l_8x8_300e_coco_20211126_140236-d3bd2b23.pth', 'pretrained_weights/dwpose/yolox_l_8x8_300e_coco.pth')
+# Download files
+download_files(urls, paths)
